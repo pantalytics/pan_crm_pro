@@ -26,7 +26,7 @@ Key Features
     'website': 'https://www.pantalytics.com/',
     'support': 'support@pantalytics.com',
     'category': 'CRM',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'license': 'OPL-1',
     'depends': ['crm', 'mail'],
     'data': [

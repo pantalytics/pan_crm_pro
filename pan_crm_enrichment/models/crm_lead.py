@@ -3,11 +3,12 @@
 import json
 import logging
 import re
+import time
 
 import requests
 from lxml import html as lxml_html
 
-from odoo import models, api, _
+from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -16,6 +17,9 @@ ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001'
 MAX_EMAIL_CHARS = 3000
 MAX_WEBSITE_CHARS = 2000
+MAX_RETRIES = 3
+INITIAL_BACKOFF_SECONDS = 2
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 529}
 
 EXTRACTION_PROMPT = """\
 You are a contact information extraction assistant. Extract contact details \
@@ -61,6 +65,33 @@ class CrmLead(models.Model):
     _inherit = 'crm.lead'
 
     # =========================================================================
+    # FIELDS
+    # =========================================================================
+
+    x_ai_enrich_done = fields.Boolean(
+        string='AI Enrichment Done',
+        help='Whether AI enrichment from chatter emails has been performed.',
+        default=False,
+    )
+    x_show_ai_enrich_button = fields.Boolean(
+        string='Show AI Enrich Button',
+        compute='_compute_x_show_ai_enrich_button',
+    )
+
+    # =========================================================================
+    # COMPUTED FIELDS
+    # =========================================================================
+
+    @api.depends('active', 'probability', 'x_ai_enrich_done')
+    def _compute_x_show_ai_enrich_button(self):
+        """Show Enrich with AI button on active, non-won, non-enriched leads."""
+        for lead in self:
+            if not lead.active or lead.x_ai_enrich_done or lead.probability == 100:
+                lead.x_show_ai_enrich_button = False
+            else:
+                lead.x_show_ai_enrich_button = True
+
+    # =========================================================================
     # ACTION METHODS
     # =========================================================================
 
@@ -80,6 +111,9 @@ class CrmLead(models.Model):
 
         # 2. Extract plain text from email bodies
         email_text = self._enrich_extract_text(messages)
+
+        if not email_text.strip():
+            raise UserError(_('No usable email text found in the chatter messages.'))
 
         # 3. Get API key
         api_key = self.env['ir.config_parameter'].sudo().get_param(
@@ -111,9 +145,12 @@ class CrmLead(models.Model):
             if company_data:
                 updated_fields += self._enrich_apply_company(company_data, discovered_website)
 
-        # 8. Post result to chatter and show notification
+        # 8. Mark enrichment as done
+        self.write({'x_ai_enrich_done': True})
+
+        # 9. Post result to chatter and show notification
         if updated_fields:
-            msg = _('AI Enrichment: %s ingevuld') % ', '.join(updated_fields)
+            msg = _('AI Enrichment updated: %s') % ', '.join(updated_fields)
             self.message_post(body=msg, message_type='notification')
             return {
                 'type': 'ir.actions.client',
@@ -136,6 +173,18 @@ class CrmLead(models.Model):
                 'sticky': False,
             },
         }
+
+    # =========================================================================
+    # LEAD MERGE SUPPORT
+    # =========================================================================
+
+    def _merge_get_fields_specific(self):
+        """Keep x_ai_enrich_done=True if any merged lead was enriched."""
+        res = super()._merge_get_fields_specific()
+        res['x_ai_enrich_done'] = lambda fname, leads: any(
+            lead.x_ai_enrich_done for lead in leads
+        )
+        return res
 
     # =========================================================================
     # TEXT EXTRACTION
@@ -172,7 +221,7 @@ class CrmLead(models.Model):
         return self._enrich_parse_json(result)
 
     def _enrich_api_request(self, api_key, prompt):
-        """Send a single request to the Anthropic Messages API."""
+        """Send request to Anthropic API with retry logic for transient errors."""
         headers = {
             'x-api-key': api_key,
             'anthropic-version': '2023-06-01',
@@ -183,32 +232,74 @@ class CrmLead(models.Model):
             'max_tokens': 1024,
             'messages': [{'role': 'user', 'content': prompt}],
         }
-        try:
-            response = requests.post(
-                ANTHROPIC_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data['content'][0]['text']
-        except requests.exceptions.RequestException as e:
-            error_detail = str(e)
-            if hasattr(e, 'response') and e.response is not None:
-                try:
-                    error_json = e.response.json()
-                    error_msg = error_json.get('error', {}).get('message', str(e))
-                    error_detail = error_msg
-                except (ValueError, KeyError):
-                    pass
-            _logger.error(f'[AI Enrichment] API call failed: {error_detail}')
-            raise UserError(_('AI Enrichment API error: %s') % error_detail)
+        last_exception = None
+        backoff = INITIAL_BACKOFF_SECONDS
+
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = requests.post(
+                    ANTHROPIC_API_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                # Retry on transient errors
+                if response.status_code in RETRYABLE_STATUS_CODES and attempt < MAX_RETRIES:
+                    retry_after = response.headers.get('retry-after')
+                    wait_time = int(retry_after) if retry_after else backoff
+                    _logger.warning(
+                        f'[AI Enrichment] API returned {response.status_code}, '
+                        f'retrying in {wait_time}s ({attempt + 1}/{MAX_RETRIES})'
+                    )
+                    time.sleep(wait_time)
+                    backoff *= 2
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+                return data['content'][0]['text']
+
+            except requests.exceptions.Timeout as e:
+                last_exception = e
+                if attempt < MAX_RETRIES:
+                    _logger.warning(
+                        f'[AI Enrichment] Request timeout, retrying in {backoff}s '
+                        f'({attempt + 1}/{MAX_RETRIES})'
+                    )
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+
+            except requests.exceptions.ConnectionError as e:
+                last_exception = e
+                if attempt < MAX_RETRIES:
+                    _logger.warning(
+                        f'[AI Enrichment] Connection error, retrying in {backoff}s '
+                        f'({attempt + 1}/{MAX_RETRIES})'
+                    )
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+
+            except requests.exceptions.RequestException as e:
+                error_detail = str(e)
+                if hasattr(e, 'response') and e.response is not None:
+                    try:
+                        error_json = e.response.json()
+                        error_detail = error_json.get('error', {}).get('message', str(e))
+                    except (ValueError, KeyError):
+                        pass
+                _logger.error(f'[AI Enrichment] API call failed: {error_detail}')
+                raise UserError(_('AI Enrichment API error: %s') % error_detail)
+
+        # All retries exhausted
+        error_detail = str(last_exception) if last_exception else 'Unknown error'
+        _logger.error(f'[AI Enrichment] API call failed after {MAX_RETRIES} retries: {error_detail}')
+        raise UserError(_('AI Enrichment API error after retries: %s') % error_detail)
 
     @api.model
     def _enrich_parse_json(self, text):
         """Parse JSON from AI response, handling markdown code blocks."""
-        # Strip markdown code fences if present
         text = text.strip()
         if text.startswith('```'):
             text = re.sub(r'^```(?:json)?\s*', '', text)
@@ -216,8 +307,14 @@ class CrmLead(models.Model):
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            _logger.warning(f'[AI Enrichment] Failed to parse AI response: {e}')
-            return {}
+            _logger.error(
+                f'[AI Enrichment] Failed to parse AI response as JSON: {e}. '
+                f'Raw response (first 200 chars): {text[:200]}'
+            )
+            raise UserError(_(
+                'AI returned an invalid response. Please try again. '
+                'Check the server logs for details.'
+            ))
 
     # =========================================================================
     # SMART MERGE — LEAD FIELDS
@@ -250,12 +347,16 @@ class CrmLead(models.Model):
             vals['partner_name'] = company_name
             updated.append('partner_name')
 
-        # Country mapping
+        # Country mapping — exact match first, then partial
         country_name = extracted.get('country')
         if country_name and not self.country_id:
             country = self.env['res.country'].search(
-                [('name', 'ilike', country_name)], limit=1
+                [('name', '=ilike', country_name)], limit=1
             )
+            if not country:
+                country = self.env['res.country'].search(
+                    [('name', 'ilike', country_name)], limit=1
+                )
             if country:
                 vals['country_id'] = country.id
                 updated.append('country_id')
