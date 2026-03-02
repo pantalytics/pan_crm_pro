@@ -26,7 +26,7 @@ Key Features
     'website': 'https://www.pantalytics.com/',
     'support': 'support@pantalytics.com',
     'category': 'CRM',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'license': 'OPL-1',
     'depends': ['crm', 'mail'],
     'data': [
@@ -34,6 +34,14 @@ Key Features
         'views/crm_lead_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'pan_crm_enrichment/static/src/scss/chatter_width.scss',
+            'pan_crm_enrichment/static/src/js/chatter_resizer.js',
+            'pan_crm_enrichment/static/src/js/timeago_field.js',
+            'pan_crm_enrichment/static/src/xml/timeago_field.xml',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

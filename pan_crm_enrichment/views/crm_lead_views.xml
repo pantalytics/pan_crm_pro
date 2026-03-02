@@ -19,4 +19,32 @@
             </xpath>
         </field>
     </record>
+
+    <!-- Email preview + last message in pipeline kanban -->
+    <record id="crm_case_kanban_view_leads_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.kanban.inherit.crm.enrichment</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='tag_ids']" position="before">
+                <field name="x_last_message_date" widget="timeago"
+                       class="text-muted" invisible="not x_last_message_date"/>
+                <field name="x_email_preview" class="text-muted text-truncate"
+                       invisible="not x_email_preview"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Email preview + last message in list view -->
+    <record id="crm_case_tree_view_oppor_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.list.inherit.crm.enrichment</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="x_email_preview" optional="show"/>
+                <field name="x_last_message_date" widget="timeago" optional="show"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>

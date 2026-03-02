@@ -1,0 +1,14 @@
+// Drag handle between form and chatter
+.o_chatter_resize_handle {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+    align-self: stretch;
+
+    &:hover,
+    &:active {
+        background-color: var(--o-color-primary, #714b67);
+    }
+}
