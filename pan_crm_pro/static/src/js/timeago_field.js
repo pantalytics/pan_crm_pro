@@ -7,7 +7,7 @@ import { formatDateTime } from "@web/core/l10n/dates";
 
 export class TimeagoField extends Component {
     static props = { ...standardFieldProps };
-    static template = "pan_crm_enrichment.TimeagoField";
+    static template = "pan_crm_pro.TimeagoField";
 
     get relativeString() {
         const value = this.props.record.data[this.props.name];

@@ -8,9 +8,9 @@ class ResConfigSettings(models.TransientModel):
 
     x_enrichment_api_key = fields.Char(
         string='Anthropic API Key',
-        config_parameter='pan_crm_enrichment.api_key',
+        config_parameter='pan_crm_pro.api_key',
     )
     x_enrichment_website_enabled = fields.Boolean(
         string='Enable Website Scraping',
-        config_parameter='pan_crm_enrichment.website_enabled',
+        config_parameter='pan_crm_pro.website_enabled',
     )

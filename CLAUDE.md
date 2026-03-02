@@ -6,7 +6,7 @@ Project context for Claude Code AI assistant.
 
 **pan_crm_pro** — CRM productivity addons for Odoo 19.0 Enterprise Edition.
 
-Currently contains **pan_crm_enrichment**: on-demand AI contact enrichment from lead chatter emails using Claude Haiku.
+Currently contains **pan_crm_pro**: on-demand AI contact enrichment from lead chatter emails using Claude Haiku.
 
 ## Development Principles
 
@@ -27,10 +27,10 @@ Currently contains **pan_crm_enrichment**: on-demand AI contact enrichment from 
 
 | File | Purpose |
 |------|---------|
-| `pan_crm_enrichment/models/crm_lead.py` | Core enrichment logic (AI call, smart merge, website scrape) |
-| `pan_crm_enrichment/models/res_config_settings.py` | API key + website toggle settings |
-| `pan_crm_enrichment/views/crm_lead_views.xml` | Enrich button on lead form |
-| `pan_crm_enrichment/views/res_config_settings_views.xml` | Settings UI under CRM |
+| `pan_crm_pro/models/crm_lead.py` | Core enrichment logic (AI call, smart merge, website scrape) |
+| `pan_crm_pro/models/res_config_settings.py` | API key + website toggle settings |
+| `pan_crm_pro/views/crm_lead_views.xml` | Enrich button on lead form |
+| `pan_crm_pro/views/res_config_settings_views.xml` | Settings UI under CRM |
 
 ## Development
 
@@ -63,7 +63,7 @@ docker-compose restart odoo
 ### Upgrade module (apply model/view/data changes)
 ```bash
 cd .local
-docker-compose exec -T odoo python -m odoo -c /etc/odoo/odoo.conf -d test_db -u pan_crm_enrichment --stop-after-init
+docker-compose exec -T odoo python -m odoo -c /etc/odoo/odoo.conf -d test_db -u pan_crm_pro --stop-after-init
 docker-compose restart odoo
 ```
 
@@ -85,7 +85,7 @@ docker-compose logs -f odoo
 ## Common Tasks
 
 ### Modifying the AI extraction prompt
-1. Edit `EXTRACTION_PROMPT` in `pan_crm_enrichment/models/crm_lead.py`
+1. Edit `EXTRACTION_PROMPT` in `pan_crm_pro/models/crm_lead.py`
 2. Test with various email signatures (different formats, languages)
 
 ### Adding a new field to extract
@@ -113,7 +113,7 @@ Search order: website (ilike) → name (ilike) → create new.
 
 - [README.md](README.md) — Repo overview
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technical details for developers
-- [pan_crm_enrichment/README.md](pan_crm_enrichment/README.md) — Module documentation
+- [pan_crm_pro/README.md](pan_crm_pro/README.md) — Module documentation
 
 ## Lessons Learned
 

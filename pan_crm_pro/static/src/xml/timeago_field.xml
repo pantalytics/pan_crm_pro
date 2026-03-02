@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="pan_crm_enrichment.TimeagoField">
+    <t t-name="pan_crm_pro.TimeagoField">
         <span t-att-title="formattedValue" class="text-muted">
             <t t-esc="relativeString"/>
         </span>

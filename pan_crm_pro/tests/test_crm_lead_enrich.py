@@ -4,7 +4,7 @@ from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase, tagged
 
 
-@tagged('pan_crm_enrichment', 'post_install', '-at_install')
+@tagged('pan_crm_pro', 'post_install', '-at_install')
 class TestCrmLeadAIEnrich(TransactionCase):
 
     @classmethod

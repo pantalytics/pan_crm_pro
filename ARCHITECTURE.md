@@ -10,7 +10,7 @@ Technical documentation for developers working on pan_crm_pro modules.
 
 CRM productivity addons for Odoo 19. Currently contains one module:
 
-- **pan_crm_enrichment** — On-demand AI contact enrichment from lead chatter emails.
+- **pan_crm_pro** — On-demand AI contact enrichment from lead chatter emails.
 
 ### Repository Structure
 
@@ -20,7 +20,7 @@ pan_crm_pro/
 ├── CLAUDE.md
 ├── README.md
 ├── .gitignore
-└── pan_crm_enrichment/
+└── pan_crm_pro/
     ├── __manifest__.py
     ├── __init__.py
     ├── models/
@@ -38,7 +38,7 @@ pan_crm_pro/
 
 ---
 
-## 2. pan_crm_enrichment
+## 2. pan_crm_pro
 
 ### Flow
 
@@ -163,8 +163,8 @@ Stored via `ir.config_parameter` (accessible in CRM settings):
 
 | Parameter | Type | Purpose |
 |-----------|------|---------|
-| `pan_crm_enrichment.api_key` | Char | Anthropic API key |
-| `pan_crm_enrichment.website_enabled` | Boolean | Enable website scraping |
+| `pan_crm_pro.api_key` | Char | Anthropic API key |
+| `pan_crm_pro.website_enabled` | Boolean | Enable website scraping |
 
 Settings fields on `res.config.settings` use `x_` prefix (Odoo.sh requirement):
 - `x_enrichment_api_key`

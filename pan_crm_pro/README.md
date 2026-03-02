@@ -18,7 +18,7 @@ fills in missing fields on the lead and linked partner.
 Add as git submodule (Odoo.sh):
 
 ```bash
-git submodule add <repo-url> pan_crm_enrichment
+git submodule add <repo-url> pan_crm_pro
 ```
 
 Dependencies: `crm`, `mail` (standard Odoo modules).

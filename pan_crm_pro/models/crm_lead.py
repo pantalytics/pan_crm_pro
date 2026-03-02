@@ -151,7 +151,7 @@ class CrmLead(models.Model):
 
         # 3. Get API key
         api_key = self.env['ir.config_parameter'].sudo().get_param(
-            'pan_crm_enrichment.api_key'
+            'pan_crm_pro.api_key'
         )
         if not api_key:
             raise UserError(_(
@@ -171,7 +171,7 @@ class CrmLead(models.Model):
 
         # 7. Optional: website scrape
         website_enabled = self.env['ir.config_parameter'].sudo().get_param(
-            'pan_crm_enrichment.website_enabled'
+            'pan_crm_pro.website_enabled'
         )
         discovered_website = extracted.get('website') or self.website
         if website_enabled and discovered_website:

@@ -6,7 +6,7 @@ CRM productivity addons for Odoo 19 Enterprise by Pantalytics B.V.
 
 | Module | Description |
 |--------|-------------|
-| [pan_crm_enrichment](pan_crm_enrichment/) | AI-powered contact enrichment from chatter emails |
+| [pan_crm_pro](pan_crm_pro/) | CRM productivity enhancements with AI enrichment |
 
 ## Installation (Odoo.sh)
 
