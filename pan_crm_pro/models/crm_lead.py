@@ -43,7 +43,7 @@ class CrmLead(models.Model):
             last_msg = self.env['mail.message'].search([
                 ('model', '=', 'crm.lead'),
                 ('res_id', '=', lead.id),
-                ('message_type', 'in', ('email', 'comment')),
+                ('message_type', 'in', ('email', 'comment', 'notification')),
             ], order='date desc', limit=1)
             lead.x_last_message_date = last_msg.date if last_msg else False
 
@@ -59,7 +59,7 @@ class CrmLead(models.Model):
             messages = self.env['mail.message'].search([
                 ('model', '=', 'crm.lead'),
                 ('res_id', '=', rec_id),
-                ('message_type', 'in', ('email', 'comment')),
+                ('message_type', 'in', ('email', 'comment', 'notification')),
             ], order='date desc', limit=100)
             parts = []
             for msg in messages:
