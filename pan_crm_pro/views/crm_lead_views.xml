@@ -15,6 +15,27 @@
         </field>
     </record>
 
+    <!-- CRM Pro tab on opportunity form -->
+    <record id="crm_lead_view_form_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.inherit.pan_crm_pro</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='internal_notes']" position="after">
+                <page string="CRM Pro" name="crm_pro">
+                    <group>
+                        <field name="x_recommended_next_step" nolabel="1"
+                               placeholder="Recommended next step..."/>
+                    </group>
+                    <group>
+                        <field name="x_summary" nolabel="1"
+                               placeholder="Summary..."/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
     <!-- Email preview + last message in list view -->
     <record id="crm_case_tree_view_oppor_inherit" model="ir.ui.view">
         <field name="name">crm.lead.list.inherit.pan_crm_pro</field>
