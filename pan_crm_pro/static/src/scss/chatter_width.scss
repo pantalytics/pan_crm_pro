@@ -1,14 +1,30 @@
 // Drag handle between form and chatter
 .o_chatter_resize_handle {
-    width: 4px;
+    width: 7px;
     cursor: col-resize;
-    background: transparent;
-    transition: background-color 0.2s;
     flex-shrink: 0;
     align-self: stretch;
+    position: relative;
+    transition: background-color 0.2s;
+
+    // Subtle separator line (always visible)
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 3px;
+        width: 1px;
+        background-color: rgba(0, 0, 0, 0.12);
+        transition: background-color 0.2s, width 0.2s;
+    }
 
     &:hover,
     &:active {
-        background-color: var(--o-color-primary, #714b67);
+        &::before {
+            width: 3px;
+            left: 2px;
+            background-color: var(--o-color-primary, #714b67);
+        }
     }
 }

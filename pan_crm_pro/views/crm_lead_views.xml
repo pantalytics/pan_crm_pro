@@ -1,28 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="crm_lead_view_form_enrich" model="ir.ui.view">
-        <field name="name">crm.lead.form.enrich.ai</field>
-        <field name="model">crm.lead</field>
-        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//button[@name='%(crm.action_crm_lead2opportunity_partner)d']" position="after">
-                <field name="x_show_ai_enrich_button" invisible="1"/>
-                <field name="x_ai_enrich_done" invisible="1"/>
-                <button string="Enrich with AI"
-                        name="action_enrich_with_ai"
-                        type="object"
-                        class="btn btn-secondary"
-                        icon="fa-magic"
-                        invisible="not x_show_ai_enrich_button"
-                        confirm="This will send email content from the chatter to the Anthropic Claude API for contact extraction. Continue?"
-                        data-hotkey="shift+e"/>
-            </xpath>
-        </field>
-    </record>
-
     <!-- Email preview + last message in pipeline kanban -->
     <record id="crm_case_kanban_view_leads_inherit" model="ir.ui.view">
-        <field name="name">crm.lead.kanban.inherit.crm.enrichment</field>
+        <field name="name">crm.lead.kanban.inherit.pan_crm_pro</field>
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
         <field name="arch" type="xml">
@@ -37,7 +17,7 @@
 
     <!-- Email preview + last message in list view -->
     <record id="crm_case_tree_view_oppor_inherit" model="ir.ui.view">
-        <field name="name">crm.lead.list.inherit.crm.enrichment</field>
+        <field name="name">crm.lead.list.inherit.pan_crm_pro</field>
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
         <field name="arch" type="xml">
