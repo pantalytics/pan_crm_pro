@@ -51,9 +51,14 @@ class CrmLead(models.Model):
     def _compute_messages_context(self):
         """Aggregate the last 100 messages as HTML for AI consumption."""
         for lead in self:
+            # Use _origin.id to handle NewId records (e.g. from AI field context)
+            rec_id = lead._origin.id if hasattr(lead, '_origin') and lead._origin else lead.id
+            if not rec_id or not isinstance(rec_id, int):
+                lead.x_messages_context = False
+                continue
             messages = self.env['mail.message'].search([
                 ('model', '=', 'crm.lead'),
-                ('res_id', '=', lead.id),
+                ('res_id', '=', rec_id),
                 ('message_type', 'in', ('email', 'comment')),
             ], order='date desc', limit=100)
             parts = []
