@@ -4,9 +4,9 @@ Project context for Claude Code AI assistant.
 
 ## Module Overview
 
-**pan_crm_pro** — CRM productivity addons for Odoo 19.0 Enterprise Edition.
+**pan_crm_pro** — CRM productivity enhancements for Odoo 19.0 Enterprise Edition.
 
-Currently contains **pan_crm_pro**: on-demand AI contact enrichment from lead chatter emails using Claude Haiku.
+Three features: chatter resizer, email preview, and last contact timestamp.
 
 ## Development Principles
 
@@ -27,10 +27,11 @@ Currently contains **pan_crm_pro**: on-demand AI contact enrichment from lead ch
 
 | File | Purpose |
 |------|---------|
-| `pan_crm_pro/models/crm_lead.py` | Core enrichment logic (AI call, smart merge, website scrape) |
-| `pan_crm_pro/models/res_config_settings.py` | API key + website toggle settings |
-| `pan_crm_pro/views/crm_lead_views.xml` | Enrich button on lead form |
-| `pan_crm_pro/views/res_config_settings_views.xml` | Settings UI under CRM |
+| `pan_crm_pro/models/crm_lead.py` | Email preview + last contact computed fields |
+| `pan_crm_pro/views/crm_lead_views.xml` | Kanban + list view inheritance |
+| `pan_crm_pro/static/src/js/chatter_resizer.js` | Drag-to-resize form/chatter |
+| `pan_crm_pro/static/src/js/timeago_field.js` | "3 days ago" OWL widget |
+| `pan_crm_pro/static/src/scss/chatter_width.scss` | Drag handle styling |
 
 ## Development
 
@@ -76,45 +77,12 @@ docker-compose logs -f odoo
 ## Conventions
 
 - All custom fields use `x_` prefix (Odoo.sh requirement)
-- Log tag: `[AI Enrichment]`
 - Use `invisible` instead of `attrs` in views (Odoo 19)
 - Stored computed fields need `@api.depends` decorator
-- Smart merge: never overwrite existing field values
 - No dependency on pan_outlook_pro — works with any mail source
-
-## Common Tasks
-
-### Modifying the AI extraction prompt
-1. Edit `EXTRACTION_PROMPT` in `pan_crm_pro/models/crm_lead.py`
-2. Test with various email signatures (different formats, languages)
-
-### Adding a new field to extract
-1. Add field to `EXTRACTION_PROMPT` in `crm_lead.py`
-2. Add field mapping in `_enrich_apply_lead()` or `_enrich_apply_partner()`
-3. Bump version in `__manifest__.py`
-
-### Debugging enrichment issues
-1. Check Odoo logs for `[AI Enrichment]` tag
-2. Verify API key is set: CRM > Configuration > Settings > AI Enrichment
-3. Verify lead has email messages in chatter (type=email)
-
-## Key Design Decisions
-
-### On-demand only
-No cron, no queue. User clicks button → enrichment runs → result shown. Simple, predictable, no unexpected API costs.
-
-### Smart merge rule
-Never overwrite existing data. Check `not getattr(self, field_name)` before writing each field.
-
-### Company deduplication
-Search order: website (ilike) → name (ilike) → create new.
 
 ## Documentation
 
 - [README.md](README.md) — Repo overview
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technical details for developers
 - [pan_crm_pro/README.md](pan_crm_pro/README.md) — Module documentation
-
-## Lessons Learned
-
-_(Updated as issues are discovered)_

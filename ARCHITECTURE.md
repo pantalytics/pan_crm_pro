@@ -1,243 +1,130 @@
 # Architecture
 
-Technical documentation for developers working on pan_crm_pro modules.
+Technical documentation for developers working on CRM Pro.
 
 ---
 
-## 1. Overview
+## Overview
 
-### Purpose
+**CRM Pro** adds three UX enhancements to Odoo 19 CRM:
 
-CRM productivity addons for Odoo 19. Currently contains one module:
+1. **Chatter Resizer** — Drag-to-resize the form/chatter split
+2. **Email Preview** — Latest email preview in kanban and list views
+3. **Last Contact** — Relative timestamp of the last message
 
-- **pan_crm_pro** — On-demand AI contact enrichment from lead chatter emails.
+All features are non-destructive: they add computed fields and UI enhancements without modifying any core CRM behavior.
 
-### Repository Structure
+---
+
+## Chatter Resizer
+
+### How it works
+
+The resizer patches `FormRenderer` (OWL component) to inject a drag handle between the form sheet and the chatter panel on XXL form views.
 
 ```
-pan_crm_pro/
-├── ARCHITECTURE.md
-├── CLAUDE.md
-├── README.md
-├── .gitignore
-└── pan_crm_pro/
-    ├── __manifest__.py
-    ├── __init__.py
-    ├── models/
-    │   ├── crm_lead.py            # Enrichment logic (AI + merge)
-    │   └── res_config_settings.py # API key + website toggle
-    ├── views/
-    │   ├── crm_lead_views.xml     # Enrich button on lead form
-    │   └── res_config_settings_views.xml
-    ├── security/
-    │   └── ir.model.access.csv
-    ├── static/description/
-    │   └── icon.png
-    └── README.md
+FormRenderer.setup()
+  → onMounted / onPatched
+    → installResizer()
+      → Find .o_form_view.o_xxl_form_view
+      → Find .o_form_sheet_bg + .o-mail-Form-chatter.o-aside
+      → Insert .o_chatter_resize_handle between them
+      → Apply saved ratio from localStorage
 ```
 
----
-
-## 2. pan_crm_pro
-
-### Flow
+### Drag interaction
 
 ```
-User clicks "Enrich" button on CRM lead
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ 1. Read chatter emails                  │
-│    mail.message (type=email, limit=10)  │
-│    HTML → plain text via lxml           │
-│    Truncate to 3000 chars               │
-└─────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ 2. Call Claude Haiku API                │
-│    Structured extraction prompt         │
-│    Returns JSON with contact fields     │
-└─────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ 3. Smart merge — lead fields            │
-│    Only fill EMPTY fields               │
-│    phone, mobile, website, contact_name │
-│    function, street, city, zip, country │
-│    partner_name (company)               │
-└─────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ 4. Smart merge — partner fields         │
-│    If partner_id exists on lead         │
-│    phone, mobile, website, function     │
-│    Link to parent company (dedup)       │
-└─────────────────────────────────────────┘
-    │
-    ▼ (optional, if website scraping enabled)
-┌─────────────────────────────────────────┐
-│ 5. Website scrape                       │
-│    GET homepage, extract text via lxml  │
-│    Send to Claude for company info      │
-│    Fill: company description, industry  │
-└─────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ 6. Post summary to chatter              │
-│    Show notification with field count   │
-└─────────────────────────────────────────┘
+mousedown on handle
+  → track mousemove → compute ratio from cursor X position
+  → clamp to MIN_RATIO (0.2) / MAX_RATIO (0.8)
+  → apply as flex ratio on sheet + chatter
+mouseup
+  → save ratio to localStorage (key: "pan_crm_chatter_ratio")
 ```
 
-### Key Methods (crm_lead.py)
+### Files
 
-| Method | Purpose |
-|--------|---------|
-| `action_enrich_with_ai()` | Button action — orchestrates the full flow |
-| `_enrich_extract_text()` | HTML → plain text from mail.message bodies |
-| `_enrich_call_ai()` | Sends extraction prompt to Claude Haiku |
-| `_enrich_api_request()` | Low-level Anthropic API call |
-| `_enrich_parse_json()` | Parse JSON from AI response (handles code fences) |
-| `_enrich_apply_lead()` | Smart merge on crm.lead fields |
-| `_enrich_apply_partner()` | Smart merge on res.partner fields |
-| `_enrich_find_or_create_company()` | Company dedup by website → name → create |
-| `_enrich_scrape_website()` | Fetch + extract website text, call AI |
-| `_enrich_apply_company()` | Apply company description + industry |
+| File | Purpose |
+|------|---------|
+| `static/src/js/chatter_resizer.js` | OWL patch + drag logic |
+| `static/src/scss/chatter_width.scss` | Handle styling (hover, active states) |
 
-### Fields Enriched
+### Design decisions
 
-**On crm.lead:**
-
-| Field | Source |
-|-------|--------|
-| `phone` | Email signature |
-| `mobile` | Email signature |
-| `website` | Email signature |
-| `contact_name` | Email signature / sender name |
-| `function` | Email signature (job title) |
-| `street` / `city` / `zip` | Email signature |
-| `country_id` | Email signature (mapped via `res.country`) |
-| `partner_name` | Email signature (company name) |
-
-**On res.partner (if `partner_id` exists):**
-
-| Field | Source |
-|-------|--------|
-| `phone` | Email signature |
-| `mobile` | Email signature |
-| `website` | Email signature |
-| `function` | Email signature |
-| `parent_id` | Found/created company partner |
-
-**On parent company partner:**
-
-| Field | Source |
-|-------|--------|
-| `comment` | Website scrape: company description |
-| `industry_id` | Website scrape: industry (mapped via `res.partner.industry`) |
-
-### Company Deduplication
-
-Order of matching for parent company:
-
-1. Search `res.partner` where `is_company=True` and `website ilike` extracted website
-2. Search `res.partner` where `is_company=True` and `name ilike` extracted company name
-3. Create new company partner
-
-### Smart Merge Rule
-
-**Never overwrite existing data.** For each field:
-- If the field is already filled → skip
-- If the field is empty and AI extracted a value → write
-
-This is enforced by checking `not getattr(self, field_name)` before writing.
+- **localStorage** over server-side storage — ratio is a UI preference, not business data. No need for API calls.
+- **Patch vs. inherit** — FormRenderer is patched because it's a generic OWL component, not a model-specific view. Inheritance isn't practical here.
+- **Guard clause** — `installResizer()` returns early if the handle already exists, preventing duplicates on re-render.
 
 ---
 
-## 3. Configuration
+## Email Preview
 
-Stored via `ir.config_parameter` (accessible in CRM settings):
+### Computed field
 
-| Parameter | Type | Purpose |
-|-----------|------|---------|
-| `pan_crm_pro.api_key` | Char | Anthropic API key |
-| `pan_crm_pro.website_enabled` | Boolean | Enable website scraping |
+```python
+x_email_preview = fields.Char(compute='_compute_email_preview')
+```
 
-Settings fields on `res.config.settings` use `x_` prefix (Odoo.sh requirement):
-- `x_enrichment_api_key`
-- `x_enrichment_website_enabled`
+- **Not stored** — recomputed on every read (emails change frequently, storage would require complex invalidation)
+- Searches `mail.message` for `type=email`, ordered by `id desc`
+- Uses `msg.preview` (Odoo's built-in preview text)
+- Batched: one query for all leads in the recordset, then mapped by `res_id`
 
----
+### Views
 
-## 4. AI Integration
+Injected via XPath in both kanban and list views:
 
-### API
-
-- **Endpoint:** `https://api.anthropic.com/v1/messages`
-- **Model:** `claude-haiku-4-5-20251001` (fast, low cost)
-- **Auth:** `x-api-key` header with API key from settings
-- **API version:** `2023-06-01`
-
-### Prompts
-
-Two prompts are used:
-
-1. **Contact extraction** — extracts name, phone, company, etc. from email text
-2. **Website extraction** — extracts company description and industry from homepage text
-
-Both prompts request JSON output with `null` for missing fields.
-
-### Cost Control
-
-- Email text truncated to 3000 chars
-- Website text truncated to 2000 chars
-- Max 10 emails read per enrichment
-- Claude Haiku is the cheapest model available
+| View | Position | Display |
+|------|----------|---------|
+| Kanban | Before `tag_ids` | `text-muted text-truncate`, hidden when empty |
+| List | After `name` | Optional column (`optional="show"`) |
 
 ---
 
-## 5. Data Disclosure
+## Last Contact
 
-Email content from the lead chatter is sent to the Anthropic Claude API for contact extraction. When website scraping is enabled, discovered company websites are fetched and their content is also sent to the Claude API. No data is stored externally.
+### Computed field
 
----
+```python
+x_last_message_date = fields.Datetime(
+    compute='_compute_last_message_date',
+    store=True,
+)
+```
 
-## 6. Design Decisions
+- **Stored** — enables sorting, grouping, and searching in list view
+- `@api.depends('message_ids')` triggers recomputation when messages change
+- Searches for `message_type in ('email', 'comment')` — excludes system notifications
 
-### On-demand only (no cron)
+### Timeago widget
 
-Enrichment runs only when user clicks the button. No background processing, no queue, no cron. This keeps the module simple, predictable, and avoids unexpected API costs.
+Custom OWL field widget registered as `timeago` in the field registry.
 
-### No dependency on pan_outlook_pro
+| File | Purpose |
+|------|---------|
+| `static/src/js/timeago_field.js` | OWL component using Luxon's `toRelative()` |
+| `static/src/xml/timeago_field.xml` | Template with tooltip for full datetime |
 
-This module works with standard `mail.message` records regardless of how emails arrive (Outlook Pro, fetchmail, manual). No import or dependency on `pan_outlook_pro`.
-
-### Plain API key storage
-
-The API key is stored as `ir.config_parameter` (plain text). Unlike OAuth tokens which are user credentials, an API key is a system-level secret already protected by Odoo's access controls. Encryption would add complexity without meaningful security benefit since `ir.config_parameter` is only accessible to system admins.
-
-### lxml for HTML parsing
-
-Uses `lxml.html.document_fromstring()` for HTML → text conversion. lxml is bundled with Odoo, so no extra dependency needed.
-
----
-
-## 7. Log Tags
-
-| Tag | Purpose |
-|-----|---------|
-| `[AI Enrichment]` | All enrichment operations |
+The widget calls `value.toRelative()` (Luxon DateTime method) to produce strings like "3 days ago", "2 hours ago". The full formatted datetime is shown as a tooltip on hover.
 
 ---
 
-## 8. Dependencies
+## Dependencies
 
 | Dependency | Type | Purpose |
 |------------|------|---------|
 | `crm` | Odoo module | CRM lead model |
-| `mail` | Odoo module | mail.message (chatter) |
-| `requests` | Python stdlib | HTTP calls to Anthropic API + website scraping |
-| `lxml` | Python (bundled) | HTML → text conversion |
+| `mail` | Odoo module | `mail.message` for email preview + last contact |
+| `pan_ai_pro` | Odoo module | AI provider (enables AI-powered CRM features) |
+
+---
+
+## Module Manifest
+
+```
+Version:  19.0.2.0.0
+License:  LGPL-3
+Assets:   web.assets_backend (JS, SCSS, XML)
+Data:     views/crm_lead_views.xml
+```
