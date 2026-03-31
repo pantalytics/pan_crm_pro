@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'CRM Pro',
-    'summary': 'CRM productivity enhancements: chatter resizer, email preview, last contact',
+    'summary': 'CRM productivity enhancements: email preview, last contact',
     'description': """
 CRM Pro
 =======
 
 Productivity enhancements for Odoo CRM by Pantalytics.
-
-**Chatter Resizer** — Drag the boundary between the form and chatter to resize.
 
 **Email Preview** — See the latest email preview in kanban and list views.
 
@@ -26,8 +24,6 @@ Productivity enhancements for Odoo CRM by Pantalytics.
     ],
     'assets': {
         'web.assets_backend': [
-            'pan_crm_pro/static/src/scss/chatter_width.scss',
-            'pan_crm_pro/static/src/js/chatter_resizer.js',
             'pan_crm_pro/static/src/js/timeago_field.js',
             'pan_crm_pro/static/src/xml/timeago_field.xml',
         ],
