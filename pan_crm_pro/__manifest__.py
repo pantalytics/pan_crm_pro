@@ -16,7 +16,7 @@ Productivity enhancements for Odoo CRM by Pantalytics.
     'website': 'https://www.pantalytics.com/',
     'support': 'support@pantalytics.com',
     'category': 'CRM',
-    'version': '19.0.2.0.0',
+    'version': '19.0.2.1.0',
     'license': 'LGPL-3',
     'depends': ['crm', 'mail', 'pan_ai_pro'],
     'data': [

@@ -10,6 +10,12 @@ class CrmLead(models.Model):
     # FIELDS
     # =========================================================================
 
+    x_sequence = fields.Integer(
+        string='Pipeline Position',
+        default=10,
+        help='Manual position of the lead within its pipeline stage. '
+             'Updated by dragging cards vertically in the kanban view.',
+    )
     x_last_message_date = fields.Datetime(
         string='Last Message',
         compute='_compute_last_message_date',
