@@ -6,6 +6,17 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
         <field name="arch" type="xml">
+            <!-- Manual vertical ordering within a stage: x_sequence is the
+                 drag handle, default_order makes the kanban sort by it so
+                 a drop position survives reloads. Priority comes first so
+                 starred leads stay on top, same as project tasks. Other
+                 views keep the standard "priority desc, id desc" order. -->
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="default_order">priority desc, x_sequence, id desc</attribute>
+            </xpath>
+            <xpath expr="//field[@name='stage_id']" position="after">
+                <field name="x_sequence" widget="handle"/>
+            </xpath>
             <xpath expr="//field[@name='tag_ids']" position="before">
                 <field name="x_last_message_date" widget="timeago"
                        class="text-muted" invisible="not x_last_message_date"/>
